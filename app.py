@@ -29,8 +29,9 @@ class ParametricSurfaceApp(ctk.CTk):
 
         self.sidebar_visible = True
 
-        # Almacenamiento de múltiples superficies
+        # Almacenamiento de múltiples superficies y control de selección
         self.surfaces_list = []
+        self.selected_surface_index = 0
 
         self.trig_functions = [
             "arcsen", "arcsin", "arccos", "arctan",
@@ -65,9 +66,9 @@ class ParametricSurfaceApp(ctk.CTk):
         # ====================================================
         # PESTAÑA 1: SUPERFICIES
         # ====================================================
-        self.entry_x = self._create_input_field(self.tab_surf, "x(u, v):", "u . cos(v)")
-        self.entry_y = self._create_input_field(self.tab_surf, "y(u, v):", "u . sen(v)")
-        self.entry_z = self._create_input_field(self.tab_surf, "z(u, v):", "u^2")
+        self.entry_x = self._create_input_field(self.tab_surf, "x(u, v):", "e^u . cos(v)")
+        self.entry_y = self._create_input_field(self.tab_surf, "y(u, v):", "e^u . sen(v)")
+        self.entry_z = self._create_input_field(self.tab_surf, "z(u, v):", "u")
 
         # Rango u
         self._add_section_header(self.tab_surf, "Rango Parámetro u")
@@ -96,11 +97,11 @@ class ParametricSurfaceApp(ctk.CTk):
         # Botones de Acción de Superficie
         self.plot_button = ctk.CTkButton(
             self.tab_surf, 
-            text="Graficar Superficie Principal", 
+            text="Graficar como Principal única", 
             command=self.plot_primary,
             font=ctk.CTkFont(weight="bold")
         )
-        self.plot_button.pack(pady=8, padx=10, fill="x")
+        self.plot_button.pack(pady=6, padx=10, fill="x")
 
         self.add_surf_btn = ctk.CTkButton(
             self.tab_surf, 
@@ -110,10 +111,25 @@ class ParametricSurfaceApp(ctk.CTk):
         )
         self.add_surf_btn.pack(pady=3, padx=10, fill="x")
 
-        # Sección para Eliminar Superficies
+        # ====================================================
+        # SECCIÓN: GESTIONAR SUPERFICIES ACTIVAS
+        # ====================================================
         self._add_section_header(self.tab_surf, "Gestionar Superficies Activas")
-        self.delete_option = ctk.CTkOptionMenu(self.tab_surf, values=["Superficie 1"])
-        self.delete_option.pack(fill="x", padx=10, pady=2)
+        
+        self.select_option = ctk.CTkOptionMenu(
+            self.tab_surf, 
+            values=["Superficie 1"], 
+            command=self.on_surface_selected
+        )
+        self.select_option.pack(fill="x", padx=10, pady=2)
+
+        self.update_surf_btn = ctk.CTkButton(
+            self.tab_surf, 
+            text="Guardar Cambios en Seleccionada", 
+            fg_color="#f59f00", hover_color="#f08c00", text_color="black",
+            command=self.update_selected_surface
+        )
+        self.update_surf_btn.pack(pady=3, padx=10, fill="x")
 
         self.remove_surf_btn = ctk.CTkButton(
             self.tab_surf, 
@@ -140,7 +156,6 @@ class ParametricSurfaceApp(ctk.CTk):
         self.point_u0 = self._create_range_entry(self.frame_point_uv, "u0:", "1")
         self.point_v0 = self._create_range_entry(self.frame_point_uv, "v0:", "pi/4")
 
-        # Etiqueta de Resultados (Producto Vectorial y Ecuación)
         self.tangent_info_label = ctk.CTkLabel(
             self.tab_tangent, 
             text="Producto Vectorial ru x rv:\n-\n\nEcuación Plano Tangente:\n-", 
@@ -259,31 +274,67 @@ class ParametricSurfaceApp(ctk.CTk):
         self.status_box.configure(state="disabled")
 
     # ----------------------------------------------------
-    # Lógica de Múltiples Superficies
+    # Lógica de Múltiples Superficies y Selección
     # ----------------------------------------------------
     def plot_primary(self):
         surf = self._get_current_input_data()
         self.surfaces_list = [surf]
-        self._update_delete_dropdown()
+        self.selected_surface_index = 0
+        self._update_selection_dropdown()
         self.plot_surface()
 
     def add_surface(self):
         surf = self._get_current_input_data()
         self.surfaces_list.append(surf)
-        self._update_delete_dropdown()
+        self.selected_surface_index = len(self.surfaces_list) - 1
+        self._update_selection_dropdown()
         self.plot_surface()
 
+    def update_selected_surface(self):
+        if not self.surfaces_list:
+            return
+        idx = self.selected_surface_index
+        if 0 <= idx < len(self.surfaces_list):
+            self.surfaces_list[idx] = self._get_current_input_data()
+            self.plot_surface()
+            self.show_log(f"Superficie {idx+1} actualizada correctamente.", is_error=False)
+
     def remove_surface(self):
-        selected = self.delete_option.get()
-        if not selected or not self.surfaces_list:
+        selected = self.select_option.get()
+        if not selected or not self.surfaces_list or selected == "Ninguna":
             return
         
         try:
             index = int(selected.split(" ")[1]) - 1
             if 0 <= index < len(self.surfaces_list):
                 self.surfaces_list.pop(index)
-                self._update_delete_dropdown()
+                self.selected_surface_index = max(0, index - 1)
+                self._update_selection_dropdown()
                 self.plot_surface()
+        except Exception:
+            pass
+
+    def on_surface_selected(self, choice):
+        if not self.surfaces_list or choice == "Ninguna":
+            return
+        try:
+            index = int(choice.split(" ")[1]) - 1
+            if 0 <= index < len(self.surfaces_list):
+                self.selected_surface_index = index
+                surf = self.surfaces_list[index]
+                
+                # Cargar valores en los campos de texto
+                self.entry_x.delete(0, ctk.END); self.entry_x.insert(0, surf['x'])
+                self.entry_y.delete(0, ctk.END); self.entry_y.insert(0, surf['y'])
+                self.entry_z.delete(0, ctk.END); self.entry_z.insert(0, surf['z'])
+                self.u_min.delete(0, ctk.END); self.u_min.insert(0, surf['u_min'])
+                self.u_max.delete(0, ctk.END); self.u_max.insert(0, surf['u_max'])
+                self.v_min.delete(0, ctk.END); self.v_min.insert(0, surf['v_min'])
+                self.v_max.delete(0, ctk.END); self.v_max.insert(0, surf['v_max'])
+                self.cmap_option.set(surf.get('cmap', 'viridis'))
+
+                # Graficar SOLAMENTE la función seleccionada
+                self.plot_single_surface(index)
         except Exception:
             pass
 
@@ -299,12 +350,15 @@ class ParametricSurfaceApp(ctk.CTk):
             "cmap": self.cmap_option.get()
         }
 
-    def _update_delete_dropdown(self):
+    def _update_selection_dropdown(self):
         options = [f"Superficie {i+1}" for i in range(len(self.surfaces_list))]
         if not options:
             options = ["Ninguna"]
-        self.delete_option.configure(values=options)
-        self.delete_option.set(options[0])
+        self.select_option.configure(values=options)
+        if 0 <= self.selected_surface_index < len(options):
+            self.select_option.set(options[self.selected_surface_index])
+        else:
+            self.select_option.set(options[0])
 
     # ----------------------------------------------------
     # Ocultar / Mostrar Panel Lateral
@@ -431,11 +485,9 @@ class ParametricSurfaceApp(ctk.CTk):
         y_expr = sp.sympify(self._preprocess_expr(surf['y']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
         z_expr = sp.sympify(self._preprocess_expr(surf['z']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
 
-        # Derivadas ru y rv
         ru = [sp.diff(x_expr, u_sym), sp.diff(y_expr, u_sym), sp.diff(z_expr, u_sym)]
         rv = [sp.diff(x_expr, v_sym), sp.diff(y_expr, v_sym), sp.diff(z_expr, v_sym)]
 
-        # Producto Vectorial N = ru x rv
         N_x = ru[1]*rv[2] - ru[2]*rv[1]
         N_y = ru[2]*rv[0] - ru[0]*rv[2]
         N_z = ru[0]*rv[1] - ru[1]*rv[0]
@@ -469,35 +521,29 @@ class ParametricSurfaceApp(ctk.CTk):
                 self.show_log("No hay ninguna superficie activa para calcular el área.", is_error=True)
                 return
             
-            last_surf = self.surfaces_list[-1]
+            last_surf = self.surfaces_list[self.selected_surface_index]
             u_sym, v_sym = sp.symbols('u v')
             
             x_expr = sp.sympify(self._preprocess_expr(last_surf['x']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
             y_expr = sp.sympify(self._preprocess_expr(last_surf['y']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
             z_expr = sp.sympify(self._preprocess_expr(last_surf['z']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
 
-            # Derivadas parciales r_u y r_v
             ru = [sp.diff(x_expr, u_sym), sp.diff(y_expr, u_sym), sp.diff(z_expr, u_sym)]
             rv = [sp.diff(x_expr, v_sym), sp.diff(y_expr, v_sym), sp.diff(z_expr, v_sym)]
 
-            # Producto Vectorial N = r_u x r_v
             N_x = ru[1]*rv[2] - ru[2]*rv[1]
             N_y = ru[2]*rv[0] - ru[0]*rv[2]
             N_z = ru[0]*rv[1] - ru[1]*rv[0]
 
-            # Magnitud del vector normal: ||r_u x r_v||
             magnitude_expr = sp.sqrt(N_x**2 + N_y**2 + N_z**2)
 
-            # Evaluar límites de integración para u y v
             u_min_val = float(self._eval_expr(last_surf['u_min'], {}))
             u_max_val = float(self._eval_expr(last_surf['u_max'], {}))
             v_min_val = float(self._eval_expr(last_surf['v_min'], {}))
             v_max_val = float(self._eval_expr(last_surf['v_max'], {}))
 
-            # Convertir la expresión simbólica a una función numérica optimizada con numpy
             f_area = sp.lambdify((u_sym, v_sym), magnitude_expr, modules=['numpy'])
 
-            # Resolver la integral doble mediante cuadratura numérica de SciPy
             area_val, _ = integrate.dblquad(
                 lambda v_val, u_val: float(f_area(u_val, v_val)),
                 u_min_val, u_max_val,
@@ -505,9 +551,8 @@ class ParametricSurfaceApp(ctk.CTk):
                 lambda u: v_max_val
             )
 
-            # Mostrar el resultado en la interfaz
             self.area_info_label.configure(
-                text=f"Área de la superficie:\nA = {area_val:.4f} unidades²"
+                text=f"Área (Sup. {self.selected_surface_index+1}):\nA = {area_val:.4f} unidades²"
             )
             self.show_log("Área calculada exitosamente.", is_error=False)
 
@@ -518,9 +563,18 @@ class ParametricSurfaceApp(ctk.CTk):
     # Graficado 3D Interactivo
     # ----------------------------------------------------
     def plot_surface(self):
+        # Renderiza TODAS las superficies simultáneamente
+        self._render_surfaces_sub(self.surfaces_list)
+
+    def plot_single_surface(self, index):
+        # Renderiza ÚNICAMENTE la superficie seleccionada
+        if 0 <= index < len(self.surfaces_list):
+            self._render_surfaces_sub([self.surfaces_list[index]])
+
+    def _render_surfaces_sub(self, surfaces_to_plot):
         self.show_log("Escena renderizada sin errores.", is_error=False)
         try:
-            if not self.surfaces_list:
+            if not surfaces_to_plot:
                 self.ax.clear()
                 self.canvas.draw()
                 return
@@ -528,7 +582,6 @@ class ParametricSurfaceApp(ctk.CTk):
             elev, azim = self.ax.elev, self.ax.azim
             self.ax.clear()
 
-            # Estilo GeoGebra
             self.ax.set_facecolor('white')
             self.ax.xaxis.pane.fill = False
             self.ax.yaxis.pane.fill = False
@@ -541,8 +594,7 @@ class ParametricSurfaceApp(ctk.CTk):
             all_X, all_Y, all_Z = [], [], []
             n_points = int(self.resolution_entry.get())
 
-            # 1. Renderizar cada superficie
-            for surf in self.surfaces_list:
+            for surf in surfaces_to_plot:
                 u_min_val = self._eval_expr(surf['u_min'], {})
                 u_max_val = self._eval_expr(surf['u_max'], {})
                 v_min_val = self._eval_expr(surf['v_min'], {})
@@ -570,24 +622,20 @@ class ParametricSurfaceApp(ctk.CTk):
                     antialiased=True
                 )
 
-            # 2. Renderizar Punto, Vector Normal y Plano Tangente
-            if self.switch_normal.get() or self.switch_tangent.get():
-                last_surf = self.surfaces_list[-1]
+            if (self.switch_normal.get() or self.switch_tangent.get()) and self.surfaces_list:
+                active_surf = self.surfaces_list[self.selected_surface_index]
                 u0_val = self._eval_expr(self.point_u0.get(), {})
                 v0_val = self._eval_expr(self.point_v0.get(), {})
 
-                p0, N_unit, N_raw, plane_eq = self._compute_normal_and_tangent(last_surf, u0_val, v0_val)
+                p0, N_unit, N_raw, plane_eq = self._compute_normal_and_tangent(active_surf, u0_val, v0_val)
 
-                # Actualizar información detallada en el menú lateral
                 self.tangent_info_label.configure(
-                    text=f"Producto Vectorial ru x rv:\n({N_raw[0]:.2f}, {N_raw[1]:.2f}, {N_raw[2]:.2f})\n\nEcuación Plano Tangente:\n{plane_eq}"
+                    text=f"Sup. Activa {self.selected_surface_index+1} - ru x rv:\n({N_raw[0]:.2f}, {N_raw[1]:.2f}, {N_raw[2]:.2f})\n\nPlano Tangente:\n{plane_eq}"
                 )
 
-                # Graficar Punto P0 con sus coordenadas
                 self.ax.scatter([p0[0]], [p0[1]], [p0[2]], color='black', s=60, zorder=10)
                 self.ax.text(p0[0], p0[1], p0[2]*1.05, f"P({p0[0]:.2f}, {p0[1]:.2f}, {p0[2]:.2f})", color='black', weight='bold')
 
-                # Vector Normal N y sus componentes sobre el gráfico
                 if self.switch_normal.get():
                     scale = 2.0
                     self.ax.quiver(
@@ -595,15 +643,7 @@ class ParametricSurfaceApp(ctk.CTk):
                         N_unit[0]*scale, N_unit[1]*scale, N_unit[2]*scale,
                         color='magenta', linewidth=3, arrow_length_ratio=0.2
                     )
-                    self.ax.text(
-                        p0[0] + N_unit[0]*scale*1.1, 
-                        p0[1] + N_unit[1]*scale*1.1, 
-                        p0[2] + N_unit[2]*scale*1.1, 
-                        f"N({N_raw[0]:.2f}, {N_raw[1]:.2f}, {N_raw[2]:.2f})", 
-                        color='magenta', fontsize=10, weight='bold'
-                    )
 
-                # Plano Tangente
                 if self.switch_tangent.get() and np.linalg.norm(N_raw) != 0:
                     d = -np.dot(N_raw, p0)
                     tx = np.linspace(p0[0]-1.5, p0[0]+1.5, 10)
@@ -613,7 +653,6 @@ class ParametricSurfaceApp(ctk.CTk):
                         TZ = (-N_raw[0]*TX - N_raw[1]*TY - d) / N_raw[2]
                         self.ax.plot_surface(TX, TY, TZ, color='orange', alpha=0.4, shade=False)
 
-            # 3. Límites Simétricos
             concat_X = np.concatenate([x.flatten() for x in all_X])
             concat_Y = np.concatenate([y.flatten() for y in all_Y])
             concat_Z = np.concatenate([z.flatten() for z in all_Z])
@@ -630,28 +669,14 @@ class ParametricSurfaceApp(ctk.CTk):
             self.ax.set_ylim(-limit, limit)
             self.ax.set_zlim(-limit, limit)
 
-            # 4. Cuadrícula Plano Z = 0
             grid_steps = np.linspace(-limit, limit, 21)
             gx, gy = np.meshgrid(grid_steps, grid_steps)
             gz = np.zeros_like(gx)
             self.ax.plot_wireframe(gx, gy, gz, color='gray', alpha=0.25, linewidth=0.7)
 
-            # 5. Ejes Vectoriales
             self.ax.quiver(-limit, 0, 0, 2*limit, 0, 0, color='red', arrow_length_ratio=0.03, linewidth=2)
             self.ax.quiver(0, -limit, 0, 0, 2*limit, 0, color='green', arrow_length_ratio=0.03, linewidth=2)
             self.ax.quiver(0, 0, -limit, 0, 0, 2*limit, color='blue', arrow_length_ratio=0.03, linewidth=2)
-
-            ticks = np.arange(-int(limit)+1, int(limit), 2)
-            ticks = ticks[ticks != 0]
-
-            for t in ticks:
-                self.ax.text(t, 0, 0, f"{t}", color='darkred', fontsize=8, ha='center', weight='bold')
-                self.ax.text(0, t, 0, f"{t}", color='darkgreen', fontsize=8, ha='center', weight='bold')
-                self.ax.text(0, 0, t, f"{t}", color='darkblue', fontsize=8, ha='center', weight='bold')
-
-            self.ax.text(limit*1.05, 0, 0, "X", color='red', fontsize=12, weight='bold')
-            self.ax.text(0, limit*1.05, 0, "Y", color='green', fontsize=12, weight='bold')
-            self.ax.text(0, 0, limit*1.05, "Z", color='blue', fontsize=12, weight='bold')
 
             self.ax.set_axis_off()
 
@@ -702,7 +727,8 @@ class ParametricSurfaceApp(ctk.CTk):
                 
                 if "surfaces" in data:
                     self.surfaces_list = data["surfaces"]
-                    self._update_delete_dropdown()
+                    self.selected_surface_index = 0
+                    self._update_selection_dropdown()
 
                 if "u0" in data: self.point_u0.delete(0, ctk.END); self.point_u0.insert(0, str(data["u0"]))
                 if "v0" in data: self.point_v0.delete(0, ctk.END); self.point_v0.insert(0, str(data["v0"]))
