@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from tkinter import filedialog
+import scipy.integrate as integrate
 
 
 class ParametricSurfaceApp(ctk.CTk):
@@ -58,14 +59,15 @@ class ParametricSurfaceApp(ctk.CTk):
 
         self.tab_surf = self.tabview.add("Superficies")
         self.tab_tangent = self.tabview.add("Tangente / Normal")
+        self.tab_area = self.tabview.add("Área")
         self.tab_file = self.tabview.add("Archivo")
 
         # ====================================================
         # PESTAÑA 1: SUPERFICIES
         # ====================================================
-        self.entry_x = self._create_input_field(self.tab_surf, "x(u, v):", "e^u . cos(v)")
-        self.entry_y = self._create_input_field(self.tab_surf, "y(u, v):", "e^u . sen(v)")
-        self.entry_z = self._create_input_field(self.tab_surf, "z(u, v):", "u")
+        self.entry_x = self._create_input_field(self.tab_surf, "x(u, v):", "u . cos(v)")
+        self.entry_y = self._create_input_field(self.tab_surf, "y(u, v):", "u . sen(v)")
+        self.entry_z = self._create_input_field(self.tab_surf, "z(u, v):", "u^2")
 
         # Rango u
         self._add_section_header(self.tab_surf, "Rango Parámetro u")
@@ -157,7 +159,29 @@ class ParametricSurfaceApp(ctk.CTk):
         self.calc_tangent_btn.pack(pady=5, padx=10, fill="x")
 
         # ====================================================
-        # PESTAÑA 3: ARCHIVOS Y EXPORTACIÓN
+        # PESTAÑA 3: ÁREA DE LA SUPERFICIE
+        # ====================================================
+        self._add_section_header(self.tab_area, "Cálculo de Área (Integral Doble)")
+        self.area_info_label = ctk.CTkLabel(
+            self.tab_area, 
+            text="Área de la superficie:\n-", 
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color="#2b8a3e",
+            justify="left",
+            wraplength=260
+        )
+        self.area_info_label.pack(pady=15, padx=10, fill="x")
+
+        self.calc_area_btn = ctk.CTkButton(
+            self.tab_area, 
+            text="Calcular Área de Superficie", 
+            fg_color="#2b8a3e", hover_color="#216a30",
+            command=self.compute_surface_area
+        )
+        self.calc_area_btn.pack(pady=5, padx=10, fill="x")
+
+        # ====================================================
+        # PESTAÑA 4: ARCHIVOS Y EXPORTACIÓN
         # ====================================================
         self.save_img_button = ctk.CTkButton(
             self.tab_file, 
@@ -398,7 +422,7 @@ class ParametricSurfaceApp(ctk.CTk):
             return float(parsed_expr.evalf())
 
     # ----------------------------------------------------
-    # Cálculo del Plano Tangente y Vector Normal
+    # Cálculo del Plano Tangente, Vector Normal y Área
     # ----------------------------------------------------
     def _compute_normal_and_tangent(self, surf, u0_val, v0_val):
         u_sym, v_sym = sp.symbols('u v')
@@ -438,6 +462,57 @@ class ParametricSurfaceApp(ctk.CTk):
         plane_eq = f"{A:.2f}x + {B:.2f}y + {C:.2f}z + {D:.2f} = 0"
 
         return p0, N_unit, N_vec, plane_eq
+
+    def compute_surface_area(self):
+        try:
+            if not self.surfaces_list:
+                self.show_log("No hay ninguna superficie activa para calcular el área.", is_error=True)
+                return
+            
+            last_surf = self.surfaces_list[-1]
+            u_sym, v_sym = sp.symbols('u v')
+            
+            x_expr = sp.sympify(self._preprocess_expr(last_surf['x']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
+            y_expr = sp.sympify(self._preprocess_expr(last_surf['y']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
+            z_expr = sp.sympify(self._preprocess_expr(last_surf['z']), locals={'u': u_sym, 'v': v_sym, 'e': sp.E, 'pi': sp.pi})
+
+            # Derivadas parciales r_u y r_v
+            ru = [sp.diff(x_expr, u_sym), sp.diff(y_expr, u_sym), sp.diff(z_expr, u_sym)]
+            rv = [sp.diff(x_expr, v_sym), sp.diff(y_expr, v_sym), sp.diff(z_expr, v_sym)]
+
+            # Producto Vectorial N = r_u x r_v
+            N_x = ru[1]*rv[2] - ru[2]*rv[1]
+            N_y = ru[2]*rv[0] - ru[0]*rv[2]
+            N_z = ru[0]*rv[1] - ru[1]*rv[0]
+
+            # Magnitud del vector normal: ||r_u x r_v||
+            magnitude_expr = sp.sqrt(N_x**2 + N_y**2 + N_z**2)
+
+            # Evaluar límites de integración para u y v
+            u_min_val = float(self._eval_expr(last_surf['u_min'], {}))
+            u_max_val = float(self._eval_expr(last_surf['u_max'], {}))
+            v_min_val = float(self._eval_expr(last_surf['v_min'], {}))
+            v_max_val = float(self._eval_expr(last_surf['v_max'], {}))
+
+            # Convertir la expresión simbólica a una función numérica optimizada con numpy
+            f_area = sp.lambdify((u_sym, v_sym), magnitude_expr, modules=['numpy'])
+
+            # Resolver la integral doble mediante cuadratura numérica de SciPy
+            area_val, _ = integrate.dblquad(
+                lambda v_val, u_val: float(f_area(u_val, v_val)),
+                u_min_val, u_max_val,
+                lambda u: v_min_val,
+                lambda u: v_max_val
+            )
+
+            # Mostrar el resultado en la interfaz
+            self.area_info_label.configure(
+                text=f"Área de la superficie:\nA = {area_val:.4f} unidades²"
+            )
+            self.show_log("Área calculada exitosamente.", is_error=False)
+
+        except Exception as e:
+            self.show_log(f"Error al calcular el área:\n{str(e)}", is_error=True)
 
     # ----------------------------------------------------
     # Graficado 3D Interactivo
@@ -520,7 +595,6 @@ class ParametricSurfaceApp(ctk.CTk):
                         N_unit[0]*scale, N_unit[1]*scale, N_unit[2]*scale,
                         color='magenta', linewidth=3, arrow_length_ratio=0.2
                     )
-                    # Texto con las componentes del vector normal en el espacio 3D
                     self.ax.text(
                         p0[0] + N_unit[0]*scale*1.1, 
                         p0[1] + N_unit[1]*scale*1.1, 
