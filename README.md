@@ -39,7 +39,6 @@ Un visualizador interactivo 3D para el cálculo multivariable desarrollado en Py
 * Símbolo Neperiano: Escribe e^u para calcular $e^u$.
 * Funciones Trigonométricas: sen(u), cos(v), tan(u).
 
----
 
 ## 🚀 Requisitos e Instalación
 
