@@ -67,7 +67,7 @@ python app.py
 
 ---
 
-###📁 Estructura del Proyecto
+### 📁 Estructura del Proyecto
 ├── app.py              # Código fuente principal de la aplicación GUI en CustomTkinter
 ├── README.md           # Documentación del proyecto
 └── requirements.txt    # Lista de dependencias requeridas
