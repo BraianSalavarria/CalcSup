@@ -60,7 +60,7 @@ Si prefieres instalar las dependencias manualmente:
 ```bash
 pip install customtkinter matplotlib numpy sympy scipy
 ```
-###🛠️ Uso de la Aplicación
+### 🛠️ Uso de la Aplicación
 ```bash
 python app.py
 ```
@@ -74,5 +74,5 @@ python app.py
 
 ---
 
-📜 Licencia
+### 📜 Licencia
 Este proyecto está bajo la Licencia MIT. Consulta el archivo LICENSE para obtener más información.
