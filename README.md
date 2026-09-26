@@ -3,6 +3,7 @@
 Un visualizador interactivo 3D para el cálculo multivariable desarrollado en Python con **CustomTkinter**, **Matplotlib** y **SymPy**. Diseñado con una interfaz moderna y fluida estilo GeoGebra para facilitar el análisis gráfico y matemático de superficies paramétricas, vectores tangentes, vectores normales, planos tangentes y cálculo de área mediante integrales dobles.
 
 ---
+<img width="1912" height="1012" alt="image" src="https://github.com/user-attachments/assets/7bd3f116-26a1-491d-9ca8-a3ffd1f06bbe" />
 
 ## 🌟 Características Principales
 
