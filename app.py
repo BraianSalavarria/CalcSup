@@ -15,7 +15,7 @@ class ParametricSurfaceApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Visualizador de Superficies Paramétricas")
+        self.title(" CalcSup - Visualizador de Superficies Paramétricas")
         self.geometry("1400x850")
 
         try:
