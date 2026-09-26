@@ -47,8 +47,8 @@ Clona este repositorio e instala las librerías requeridas ejecutando:
 git clone [https://github.com/TU_USUARIO/TU_REPOSITORIO.git](https://github.com/TU_USUARIO/TU_REPOSITORIO.git)
 cd TU_REPOSITORIO
 pip install -r requirements.txt
-
+```
 Si prefieres instalar las dependencias manualmente:
-
 ```bash
 pip install customtkinter matplotlib numpy sympy scipy
+```
