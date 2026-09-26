@@ -34,10 +34,10 @@ Un visualizador interactivo 3D para el cálculo multivariable desarrollado en Py
 ---
 
 ### Guía Rápida de Entrada Matemática:
-*Potencias: Usa ^ o ** (Ejemplo: u^2 o e^u).
-*Multiplicación implícita: Admite notaciones como 2.u, 2u, e^u . cos(v).
-*Símbolo Neperiano: Escribe e^u para calcular $e^u$.
-*Funciones Trigonométricas: sen(u), cos(v), tan(u).
+* Potencias: Usa ^ o ** (Ejemplo: u^2 o e^u).
+* Multiplicación implícita: Admite notaciones como 2.u, 2u, e^u . cos(v).
+* Símbolo Neperiano: Escribe e^u para calcular $e^u$.
+* Funciones Trigonométricas: sen(u), cos(v), tan(u).
 
 ---
 
