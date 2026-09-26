@@ -32,6 +32,13 @@ Un visualizador interactivo 3D para el cálculo multivariable desarrollado en Py
   * Guardado y carga completa de proyectos en formato `.json` (mantiene estados de conmutadores, ecuaciones, resolución y configuraciones).
 
 ---
+###Guía Rápida de Entrada Matemática:
+*Potencias: Usa ^ o ** (Ejemplo: u^2 o e^u).
+*Multiplicación implícita: Admite notaciones como 2.u, 2u, e^u . cos(v).
+*Símbolo Neperiano: Escribe e^u para calcular $e^u$.
+*Funciones Trigonométricas: sen(u), cos(v), tan(u).
+
+---
 
 ## 🚀 Requisitos e Instalación
 
@@ -52,3 +59,19 @@ Si prefieres instalar las dependencias manualmente:
 ```bash
 pip install customtkinter matplotlib numpy sympy scipy
 ```
+###🛠️ Uso de la Aplicación
+```bash
+python app.py
+```
+
+---
+
+###📁 Estructura del Proyecto
+├── app.py              # Código fuente principal de la aplicación GUI en CustomTkinter
+├── README.md           # Documentación del proyecto
+└── requirements.txt    # Lista de dependencias requeridas
+
+---
+
+📜 Licencia
+Este proyecto está bajo la Licencia MIT. Consulta el archivo LICENSE para obtener más información.
